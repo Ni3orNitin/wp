@@ -10,20 +10,20 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// DOM Elements
+// --- DOM Elements ---
 const localVideo = document.getElementById("localVideo");
 const remoteVideo = document.getElementById("remoteVideo");
 const joinBtn = document.getElementById("joinBtn");
-const roomInput = document.getElementById("roomInput"); // NEW: Room Input
+const roomInput = document.getElementById("roomInput"); 
 const muteMicBtn = document.getElementById("muteMicBtn");
 const muteSpeakerBtn = document.getElementById("muteSpeakerBtn");
 const endCallBtn = document.getElementById("endCallBtn");
 const chatMessages = document.getElementById("chatMessages");
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
-const guessGameBtn = document.getElementById("guessGameBtn");
-const youtubeWatchBtn = document.getElementById("youtubeWatchBtn"); 
-const gameContainer = document.getElementById("gameContainer");
+
+// YouTube Specific Elements/Buttons
+const youtubeWatchBtn = document.getElementById("youtubeWatchBtn");
 const gameTitle = document.getElementById("gameTitle");
 const gameContent = document.getElementById("gameContent");
 
@@ -33,7 +33,7 @@ let peerConnection;
 let isInitiator = false;
 let signalingSocket;
 let username = "User" + Math.floor(Math.random() * 1000);
-let currentRoomId = null; // NEW: Store the active room ID
+let currentRoomId = null;
 
 // --- WebRTC Constants ---
 const signalingServerUrl = "wss://webrtc-ttt.onrender.com";
@@ -48,11 +48,14 @@ const iceServers = {
 
 // --- YouTube Watch Party Variables ---
 let player;
-let currentVideoId = "dQw4w9WgXcQ";
+let currentVideoId = "dQw4w9WgXcQ"; // Default Video ID
 let ignoreSync = false;
 
 
-// --- WebRTC Functions ---
+// ==========================================================
+// 🔴 WEB RTC CORE FUNCTIONS (Video Call)
+// ==========================================================
+
 async function startLocalStream() {
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -71,16 +74,17 @@ async function createPeerConnection() {
     localStream.getTracks().forEach(track => {
         peerConnection.addTrack(track, localStream);
     });
+    
     peerConnection.ontrack = (event) => {
         if (event.streams && event.streams[0]) {
             remoteVideo.srcObject = event.streams[0];
             console.log("✅ Remote stream received.");
         }
     };
+    
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-            console.log("➡️ Sending ICE candidate.");
-            // Ensure Room ID is sent with the candidate
+            // Send ICE candidate with Room ID
             signalingSocket.send(JSON.stringify({ type: "candidate", candidate: event.candidate, roomId: currentRoomId }));
         }
     };
@@ -90,10 +94,9 @@ async function startCall(initiator) {
     isInitiator = initiator;
     await createPeerConnection();
     if (isInitiator) {
-        console.log("➡️ Creating WebRTC offer.");
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
-        // Ensure Room ID is sent with the offer
+        // Send Offer with Room ID
         signalingSocket.send(JSON.stringify({ type: 'offer', offer: offer, roomId: currentRoomId }));
     }
 }
@@ -102,55 +105,50 @@ async function joinCall() {
     currentRoomId = roomInput.value.trim();
 
     if (!currentRoomId) {
-        alert("Please enter a Room ID to join.");
+        alert("Please enter a unique Room ID to join/create.");
         return;
     }
 
     try {
         await startLocalStream();
         signalingSocket = new WebSocket(signalingServerUrl);
+        
         signalingSocket.onopen = () => {
             console.log("✅ Connected to signaling server.");
-            // Send Room ID to server on connection
+            // Send client_ready with Room ID
             signalingSocket.send(JSON.stringify({ 
                 type: 'client_ready', 
                 username: username, 
-                roomId: currentRoomId // PASS ROOM ID HERE
+                roomId: currentRoomId 
             }));
         };
+        
         signalingSocket.onmessage = async (message) => {
             const data = JSON.parse(message.data);
             switch (data.type) {
                 case 'peer_connected':
-                    console.log("➡️ Another peer is available, starting call.");
-                    startCall(true);
+                    startCall(true); // Start call as initiator
                     break;
                 case 'offer':
-                    console.log("⬅️ Received offer.");
-                    startCall(false);
+                    startCall(false); // Respond to offer
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
                     const answer = await peerConnection.createAnswer();
                     await peerConnection.setLocalDescription(answer);
-                    // Ensure Room ID is sent with the answer
+                    // Send Answer with Room ID
                     signalingSocket.send(JSON.stringify({ type: 'answer', answer: answer, roomId: currentRoomId }));
                     break;
                 case 'answer':
-                    console.log("⬅️ Received answer.");
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
                     break;
                 case 'candidate':
                     if (data.candidate) {
-                        try { await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate)); console.log("⬅️ Added ICE candidate."); } catch (err) { console.error("❌ Error adding received ICE candidate:", err); }
+                        try { await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (err) { console.error("❌ Error adding received ICE candidate:", err); }
                     }
                     break;
                 case 'chat_message':
                     displayChatMessage(data.username, data.message);
                     break;
-                case 'guess_game_state':
-                    updateGuessingGameState(data);
-                    break;
                 case 'youtube_sync':
-                    console.log("⬅️ Received YouTube sync message.");
                     applyYouTubeState(data);
                     break;
                 case 'end_call':
@@ -159,8 +157,10 @@ async function joinCall() {
                     break;
             }
         };
+
+        // Update UI
         joinBtn.classList.add('hidden');
-        roomInput.classList.add('hidden'); // Hide the input field
+        roomInput.classList.add('hidden');
         muteMicBtn.classList.remove('hidden');
         muteSpeakerBtn.classList.remove('hidden');
         endCallBtn.classList.remove('hidden');
@@ -173,8 +173,8 @@ async function joinCall() {
 async function endCall() {
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
-        localVideo.srcObject = null;
         localStream = null;
+        localVideo.srcObject = null;
     }
     if (peerConnection) {
         peerConnection.close();
@@ -182,30 +182,33 @@ async function endCall() {
     }
     remoteVideo.srcObject = null;
     
-    // Show room input and join button again
+    // Reset UI state
     joinBtn.classList.remove('hidden');
-    roomInput.classList.remove('hidden'); 
-    
+    roomInput.classList.remove('hidden');
     muteMicBtn.classList.add('hidden');
     muteSpeakerBtn.classList.add('hidden');
     endCallBtn.classList.add('hidden');
     isInitiator = false;
-    console.log("❌ Call ended.");
+    
     if (signalingSocket) {
-        // Send end call message with room ID
         signalingSocket.send(JSON.stringify({ type: 'end_call', roomId: currentRoomId }));
         signalingSocket.close();
         signalingSocket = null;
     }
-    currentRoomId = null; // Clear room ID
+    currentRoomId = null; 
     
-    // Stop YouTube Player when call ends
     if (player && typeof player.stopVideo === 'function') {
         player.stopVideo();
         player.destroy();
         player = null;
     }
+    console.log("❌ Call ended.");
 }
+
+
+// ==========================================================
+// 🎙️ MEDIA CONTROLS
+// ==========================================================
 
 function toggleAudio() {
     const audioTrack = localStream.getAudioTracks()[0];
@@ -216,28 +219,13 @@ function toggleAudio() {
     }
 }
 
-function toggleVideo() {
-    const videoTrack = localStream.getVideoTracks()[0];
-    if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        toggleVideoBtn.textContent = videoTrack.enabled ? 'Stop Video' : 'Start Video';
-    }
-}
+// NOTE: toggleVideo function removed as there is no button for it in the HTML,
+// but included the basic Mute/Unmute Mic/Speaker logic.
 
-joinBtn.addEventListener('click', joinCall);
-muteMicBtn.addEventListener('click', toggleAudio);
-endCallBtn.addEventListener('click', endCall);
-muteSpeakerBtn.addEventListener('click', () => {
-    if (!remoteVideo || !remoteVideo.srcObject) return;
-    const remoteStream = remoteVideo.srcObject;
-    const audioTrack = remoteStream.getAudioTracks()[0];
-    if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        muteSpeakerBtn.textContent = audioTrack.enabled ? 'Mute Speaker' : 'Unmute Speaker';
-    }
-});
+// ==========================================================
+// 💬 CHAT LOGIC
+// ==========================================================
 
-// --- Chat Logic ---
 function displayChatMessage(sender, message) {
     const messageElement = document.createElement('div');
     messageElement.textContent = `${sender}: ${message}`;
@@ -248,7 +236,7 @@ function displayChatMessage(sender, message) {
 sendBtn.addEventListener('click', () => {
     const message = chatInput.value.trim();
     if (message && signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-        // Ensure chat message is sent with Room ID
+        // Send chat message with Room ID
         signalingSocket.send(JSON.stringify({
             type: 'chat_message',
             username: username,
@@ -265,9 +253,11 @@ chatInput.addEventListener('keydown', (e) => {
     }
 });
 
-// --- YouTube Watch Party Functions (Shared Control) ---
 
-// 1. Called by the YouTube IFrame API script when loaded
+// ==========================================================
+// 📺 YOUTUBE WATCH PARTY (Shared Control)
+// ==========================================================
+
 function onYouTubeIframeAPIReady() {
     console.log("✅ YouTube IFrame API Ready.");
     if (document.getElementById('youtube-player')) {
@@ -275,7 +265,6 @@ function onYouTubeIframeAPIReady() {
     }
 }
 
-// 2. Creates the YouTube Player
 function createYouTubePlayer(videoId) {
     if (player) {
         player.destroy();
@@ -284,42 +273,29 @@ function createYouTubePlayer(videoId) {
         height: '360',
         width: '100%',
         videoId: videoId,
-        playerVars: {
-            'playsinline': 1,
-            'rel': 0, 
-        },
+        playerVars: { 'playsinline': 1, 'rel': 0 },
         events: {
-            'onReady': onPlayerReady,
+            'onReady': () => console.log("✅ YouTube Player Ready."),
             'onStateChange': onPlayerStateChange
         }
     });
 }
 
-// 3. Called when the player is ready
-function onPlayerReady(event) {
-    console.log("✅ YouTube Player Ready.");
-}
-
-// 4. Called when the player's state changes (play, pause, buffering, etc.)
 function onPlayerStateChange(event) {
-    if (ignoreSync) {
+    if (ignoreSync || !signalingSocket || signalingSocket.readyState !== WebSocket.OPEN) {
         ignoreSync = false;
         return;
     }
 
-    if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-        let state = event.data;
-        let currentTime = player.getCurrentTime();
+    let state = event.data;
+    let currentTime = player.getCurrentTime();
 
-        if (state === YT.PlayerState.PLAYING || state === YT.PlayerState.PAUSED || state === YT.PlayerState.BUFFERING) {
-            // Send sync message with Room ID
-            sendYouTubeState(currentVideoId, state, currentTime);
-            console.log("➡️ Broadcast control action from current user.");
-        }
+    // Broadcast sync message for play (1), pause (2), or buffering (3)
+    if (state === YT.PlayerState.PLAYING || state === YT.PlayerState.PAUSED || state === YT.PlayerState.BUFFERING) {
+        sendYouTubeState(currentVideoId, state, currentTime);
     }
 }
 
-// 5. Sends video state to the signaling server
 function sendYouTubeState(videoId, playerState, currentTime) {
     signalingSocket.send(JSON.stringify({
         type: 'youtube_sync',
@@ -327,18 +303,15 @@ function sendYouTubeState(videoId, playerState, currentTime) {
         state: playerState,
         time: currentTime,
         timestamp: Date.now(),
-        roomId: currentRoomId // PASS ROOM ID HERE
+        roomId: currentRoomId // PASS ROOM ID
     }));
-    console.log(`➡️ Sending YouTube state: ${playerState} at ${currentTime}s`);
 }
 
-// 6. Applies the received video state from the peer
 function applyYouTubeState(data) {
     const { videoId, state, time, timestamp } = data;
     
     if (videoId !== currentVideoId) {
         currentVideoId = videoId;
-        console.log(`⬅️ Loading new video: ${videoId}`);
         loadYouTubeWatchParty(videoId);
         return; 
     }
@@ -353,23 +326,19 @@ function applyYouTubeState(data) {
     if (state === YT.PlayerState.PLAYING) {
         player.seekTo(syncTime, true);
         player.playVideo();
-        console.log(`⬅️ Sync: Playing at ${syncTime.toFixed(2)}s (Latency: ${latency.toFixed(3)}s)`);
     } else if (state === YT.PlayerState.PAUSED || state === YT.PlayerState.BUFFERING) {
         player.pauseVideo();
         player.seekTo(syncTime, true); 
-        console.log(`⬅️ Sync: Paused/Buffering at ${syncTime.toFixed(2)}s`);
     } else if (state === YT.PlayerState.ENDED) {
         player.stopVideo();
-        console.log(`⬅️ Sync: Ended`);
     }
 }
 
-// 7. Loads the Watch Party view
 function loadYouTubeWatchParty(videoId = currentVideoId) {
     gameTitle.textContent = "YouTube Watch Party";
     gameContent.innerHTML = `
-        <div id="youtube-player-container" style="width: 100%; max-width: 640px; margin: 0 auto;">
-            <div id="youtube-player"></div>
+        <div id="youtube-player-container" style="width: 100%; max-width: 640px; margin: 0 auto; position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;">
+            <div id="youtube-player" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
         </div>
         <div class="youtube-controls" style="margin-top: 20px; display: flex; gap: 10px;">
             <input type="text" id="videoIdInput" placeholder="Video ID or URL" style="padding: 10px; flex-grow: 1; border-radius: 8px; border: 1px solid #444; background: #333; color: #fff;">
@@ -388,7 +357,6 @@ function loadYouTubeWatchParty(videoId = currentVideoId) {
     } 
 }
 
-// 8. Handles loading a new video by ID/URL
 function handleLoadVideo() {
     const input = document.getElementById('videoIdInput').value;
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|\w*[\/\?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
@@ -413,101 +381,28 @@ function handleLoadVideo() {
     }
     
     if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-        // Send initial sync with Room ID
         sendYouTubeState(currentVideoId, YT.PlayerState.PAUSED, 0); 
     }
 }
 
 
-// --- Games Logic ---
-let wordGuessingState = {};
-const defaultWordList = ["PYTHON", "PROGRAMMING", "COMPUTER", "KEYBOARD", "DEVELOPER", "ALGORITHM", "VARIABLE"];
-const API_KEY = "YOUR_GEMINI_API_KEY";
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${API_KEY}`;
+// ==========================================================
+// 🖱️ EVENT LISTENERS
+// ==========================================================
 
-
-function handleGuessClick() {
-    if (signalingSocket && wordGuessingState.gameStatus !== 'over') {
-        const guessInput = gameContent.querySelector('#guessInput');
-        const guess = guessInput.value.toUpperCase();
-        // Send game move with Room ID
-        signalingSocket.send(JSON.stringify({
-            type: 'guess_game_move',
-            guess: guess,
-            roomId: currentRoomId
-        }));
-        guessInput.value = '';
+// Attach to the new room setup
+joinBtn.addEventListener('click', joinCall);
+muteMicBtn.addEventListener('click', toggleAudio);
+endCallBtn.addEventListener('click', endCall);
+muteSpeakerBtn.addEventListener('click', () => {
+    if (!remoteVideo || !remoteVideo.srcObject) return;
+    const remoteStream = remoteVideo.srcObject;
+    const audioTrack = remoteStream.getAudioTracks()[0];
+    if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        muteSpeakerBtn.textContent = audioTrack.enabled ? 'Mute Speaker' : 'Unmute Speaker';
     }
-}
-
-function handleHintClick() {
-    if (signalingSocket && wordGuessingState.gameStatus === 'playing') {
-        // Send hint request with Room ID
-        signalingSocket.send(JSON.stringify({ type: 'guess_game_hint', roomId: currentRoomId }));
-    }
-}
-
-function updateGuessingGameState(data) {
-    wordGuessingState = data;
-    const wordDisplay = gameContent.querySelector('#wordDisplay');
-    const turnsDisplay = gameContent.querySelector('#turnsDisplay');
-    const messageDisplay = gameContent.querySelector('#message');
-    const usedLettersDisplay = gameContent.querySelector('#usedLetters');
-    const hintDisplay = gameContent.querySelector('#hintDisplay');
-    const guessInput = gameContent.querySelector('#guessInput');
-    const guessBtn = gameContent.querySelector('#guessBtn');
-
-    wordDisplay.textContent = wordGuessingState.displayWord.join(' ');
-    turnsDisplay.textContent = `Turns left: ${wordGuessingState.turnsLeft}`;
-    messageDisplay.textContent = wordGuessingState.message;
-    usedLettersDisplay.textContent = `Used letters: ${Array.from(wordGuessingState.guessedLetters).join(', ')}`;
-    hintDisplay.textContent = `Hint: ${wordGuessingState.hint}`;
-    
-    if (wordGuessingState.gameStatus === 'over') {
-        guessInput.disabled = true;
-        guessBtn.disabled = true;
-    } else {
-        guessInput.disabled = false;
-        guessBtn.disabled = false;
-    }
-}
-
-function loadGuessingGame() {
-    gameTitle.textContent = "Word Guessing Game";
-    gameContent.innerHTML = `
-        <p class="message-display" id="message">Waiting for opponent...</p>
-        <div class="word-display" id="wordDisplay"></div>
-        <div class="turns-display" id="turnsDisplay"></div>
-        <div class="game-input-group">
-            <input type="text" id="guessInput" maxlength="1" placeholder="Guess a letter">
-            <button id="guessBtn" class="game-btn">Guess</button>
-        </div>
-        <div id="hintDisplay"></div>
-        <button id="getHintBtn" class="game-btn" style="background-color: #ff5722;">Get a Hint</button>
-        <p class="used-letters" id="usedLetters"></p>
-        <button class="restart-btn" id="restartBtn">Restart Game</button>
-    `;
-    gameContent.querySelector('#guessBtn').addEventListener('click', handleGuessClick);
-    gameContent.querySelector('#getHintBtn').addEventListener('click', handleHintClick);
-    gameContent.querySelector('#restartBtn').addEventListener('click', () => {
-        // Send restart request with Room ID
-        if (signalingSocket) {
-            signalingSocket.send(JSON.stringify({ type: 'guess_game_restart', roomId: currentRoomId }));
-        }
-    });
-}
-
-// Button listeners to load games/activities
-guessGameBtn.addEventListener('click', loadGuessingGame);
-youtubeWatchBtn.addEventListener('click', () => loadYouTubeWatchParty());
-
-// Chess game button handler
-document.getElementById("chessGameBtn").addEventListener("click", () => {
-    document.getElementById("gameTitle").innerText = "Chess Game";
-    document.getElementById("gameContent").innerHTML = `
-        <iframe src="chess/index.html" 
-                class="chess-frame"
-                style="border:none;">
-        </iframe>
-    `;
 });
+
+// Load the YouTube interface
+youtubeWatchBtn.addEventListener('click', () => loadYouTubeWatchParty());

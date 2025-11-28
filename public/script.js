@@ -21,7 +21,7 @@ const chatMessages = document.getElementById("chatMessages");
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
 const guessGameBtn = document.getElementById("guessGameBtn");
-const youtubeWatchBtn = document.getElementById("youtubeWatchBtn"); // NEW
+const youtubeWatchBtn = document.getElementById("youtubeWatchBtn");
 const gameContainer = document.getElementById("gameContainer");
 const gameTitle = document.getElementById("gameTitle");
 const gameContent = document.getElementById("gameContent");
@@ -46,7 +46,7 @@ const iceServers = {
 
 // --- YouTube Watch Party Variables ---
 let player; // YouTube IFrame API Player object
-let currentVideoId = "dQw4w9WgXcQ"; // Default video ID (Rick Astley - Never Gonna Give You Up)
+let currentVideoId = "dQw4w9WgXcQ"; // Default video ID
 let ignoreSync = false;
 
 
@@ -132,7 +132,7 @@ async function joinCall() {
                 case 'guess_game_state':
                     updateGuessingGameState(data);
                     break;
-                case 'youtube_sync': // NEW YOUTUBE CASE
+                case 'youtube_sync':
                     console.log("⬅️ Received YouTube sync message.");
                     applyYouTubeState(data);
                     break;
@@ -272,17 +272,7 @@ function createYouTubePlayer(videoId) {
 // 3. Called when the player is ready
 function onPlayerReady(event) {
     console.log("✅ YouTube Player Ready.");
-    if (isInitiator && signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-         // Force a sync when the player is ready
-         const currentTime = event.target.getCurrentTime();
-         const playerState = event.target.getPlayerState();
-         // Send a message to ensure the peer has the correct video ID and state
-         sendYouTubeState(currentVideoId, playerState, currentTime);
-    }
-    // Non-host users should be muted to prevent echo/double audio
-    if (!isInitiator) {
-        event.target.mute(); 
-    }
+    // No specific host check here; all peers sync state when the player loads.
 }
 
 // 4. Called when the player's state changes (play, pause, buffering, etc.)
@@ -295,18 +285,12 @@ function onPlayerStateChange(event) {
     if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
         let state = event.data;
         let currentTime = player.getCurrentTime();
-        
-        // Only the call initiator/host sends control signals
-        if (isInitiator) {
-            // State: 1 (Playing), 2 (Paused), 3 (Buffering)
-            if (state === YT.PlayerState.PLAYING || state === YT.PlayerState.PAUSED || state === YT.PlayerState.BUFFERING) {
-                sendYouTubeState(currentVideoId, state, currentTime);
-            }
-        } else {
-             // Non-host: if an action is taken, ignore it and wait for host sync
-             if (state === YT.PlayerState.PLAYING || state === YT.PlayerState.PAUSED) {
-                 console.log("Non-host action detected. Waiting for host sync...");
-             }
+
+        // State: 1 (Playing), 2 (Paused), 3 (Buffering)
+        if (state === YT.PlayerState.PLAYING || state === YT.PlayerState.PAUSED || state === YT.PlayerState.BUFFERING) {
+            // ANY user can send the sync message to control the group
+            sendYouTubeState(currentVideoId, state, currentTime);
+            console.log("➡️ Broadcast control action from current user.");
         }
     }
 }
@@ -337,9 +321,6 @@ function applyYouTubeState(data) {
 
     if (!player || typeof player.loadVideoById !== 'function') return;
     
-    // Ignore sync if the current user is the initiator (to prevent echo)
-    if (isInitiator) return;
-
     // Calculate time correction for network latency
     const latency = (Date.now() - timestamp) / 1000; 
     let syncTime = time + latency; 
@@ -373,7 +354,7 @@ function loadYouTubeWatchParty(videoId = currentVideoId) {
             <input type="text" id="videoIdInput" placeholder="Video ID or URL" style="padding: 10px; flex-grow: 1; border-radius: 8px; border: 1px solid #444; background: #333; color: #fff;">
             <button id="loadVideoBtn" class="game-btn" style="background-color: #e53935;">Load Video</button>
         </div>
-        ${isInitiator ? '<p style="margin-top: 15px; color: #bdbdbd;">You are the **host** and control video playback.</p>' : '<p style="margin-top: 15px; color: #bdbdbd;">You are a **viewer**. The host controls video playback.</p>'}
+        <p style="margin-top: 15px; color: #bdbdbd;">Control is **shared**. Anyone can play, pause, or seek the video.</p>
     `;
     
     // Set the input placeholder/value
@@ -391,10 +372,8 @@ function loadYouTubeWatchParty(videoId = currentVideoId) {
 
 // 8. Handles loading a new video by ID/URL
 function handleLoadVideo() {
-    if (!isInitiator) {
-        alert("Only the host can load a new video.");
-        return;
-    }
+    // Removed the 'if (!isInitiator)' check: ANYONE can load a new video
+
     const input = document.getElementById('videoIdInput').value;
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|\w*[\/\?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const match = input.match(regex);
@@ -421,7 +400,7 @@ function handleLoadVideo() {
     
     // 2. Broadcast the change to the peer
     if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-        // Send a sync message to force the peer to load the new video
+        // Send a sync message to force the peer to load the new video and pause at the start
         sendYouTubeState(currentVideoId, YT.PlayerState.PAUSED, 0); 
     }
 }
@@ -503,7 +482,7 @@ function loadGuessingGame() {
 
 // Button listeners to load games/activities
 guessGameBtn.addEventListener('click', loadGuessingGame);
-youtubeWatchBtn.addEventListener('click', () => loadYouTubeWatchParty()); // NEW
+youtubeWatchBtn.addEventListener('click', () => loadYouTubeWatchParty());
 
 // Chess game button handler
 document.getElementById("chessGameBtn").addEventListener("click", () => {

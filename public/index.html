@@ -19,7 +19,8 @@
                         <video id="remoteVideo" autoplay playsinline></video>
                     </div>
                     <div class="controls">
-                        <button id="joinBtn" class="control-btn">Join Call</button>
+                        <input type="text" id="roomInput" placeholder="Enter Room ID" style="padding: 10px; border-radius: 8px; border: 1px solid #444; background: #333; color: #fff; width: 150px;">
+                        <button id="joinBtn" class="control-btn">Join Room</button>
                         <button id="muteMicBtn" class="control-btn hidden">Mute Mic</button>
                         <button id="muteSpeakerBtn" class="control-btn hidden">Mute Speaker</button>
                         <button id="endCallBtn" class="control-btn hidden">End Call</button>
@@ -36,14 +37,16 @@
             </div>
             <div class="right-column">
                 <div class="game-section">
-                    <h3>Choose an Activity</h3> <div class="game-hub">
+                    <h3>Choose an Activity</h3>
+                    <div class="game-hub">
                         <button id="youtubeWatchBtn" class="game-btn" style="background-color: #ff0000;">YouTube Watch Party</button>
                         <button id="guessGameBtn" class="game-btn">Word Guessing Game</button>
                         <button id="chessGameBtn" class="game-btn">Chess Game</button>
                     </div>
                 </div>
                 <div id="gameContainer" class="game-section">
-                    <h3 id="gameTitle">Activity</h3> <div id="gameContent">
+                    <h3 id="gameTitle">Activity</h3>
+                    <div id="gameContent">
                         <p>Select an activity from the hub above.</p>
                     </div>
                 </div>

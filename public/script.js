@@ -21,7 +21,7 @@ const chatMessages = document.getElementById("chatMessages");
 const chatInput = document.getElementById("chatInput");
 const sendBtn = document.getElementById("sendBtn");
 const guessGameBtn = document.getElementById("guessGameBtn");
-const youtubeWatchBtn = document.getElementById("youtubeWatchBtn");
+const youtubeWatchBtn = document.getElementById("youtubeWatchBtn"); // Added for YouTube
 const gameContainer = document.getElementById("gameContainer");
 const gameTitle = document.getElementById("gameTitle");
 const gameContent = document.getElementById("gameContent");
@@ -132,7 +132,7 @@ async function joinCall() {
                 case 'guess_game_state':
                     updateGuessingGameState(data);
                     break;
-                case 'youtube_sync':
+                case 'youtube_sync': // Handle YouTube sync messages
                     console.log("⬅️ Received YouTube sync message.");
                     applyYouTubeState(data);
                     break;
@@ -238,12 +238,11 @@ chatInput.addEventListener('keydown', (e) => {
     }
 });
 
-// --- YouTube Watch Party Functions ---
+// --- YouTube Watch Party Functions (Shared Control) ---
 
-// 1. This function is called by the YouTube IFrame API script when loaded
+// 1. Called by the YouTube IFrame API script when loaded
 function onYouTubeIframeAPIReady() {
     console.log("✅ YouTube IFrame API Ready.");
-    // If the watch party view is already loaded, create the player now
     if (document.getElementById('youtube-player')) {
         createYouTubePlayer(currentVideoId);
     }
@@ -272,7 +271,7 @@ function createYouTubePlayer(videoId) {
 // 3. Called when the player is ready
 function onPlayerReady(event) {
     console.log("✅ YouTube Player Ready.");
-    // No specific host check here; all peers sync state when the player loads.
+    // With shared control, we don't need a host check here.
 }
 
 // 4. Called when the player's state changes (play, pause, buffering, etc.)
@@ -286,9 +285,9 @@ function onPlayerStateChange(event) {
         let state = event.data;
         let currentTime = player.getCurrentTime();
 
-        // State: 1 (Playing), 2 (Paused), 3 (Buffering)
+        // Broadcast sync message for play (1), pause (2), or buffering (3)
         if (state === YT.PlayerState.PLAYING || state === YT.PlayerState.PAUSED || state === YT.PlayerState.BUFFERING) {
-            // ANY user can send the sync message to control the group
+            // ANY user action broadcasts the sync message
             sendYouTubeState(currentVideoId, state, currentTime);
             console.log("➡️ Broadcast control action from current user.");
         }
@@ -302,7 +301,7 @@ function sendYouTubeState(videoId, playerState, currentTime) {
         videoId: videoId,
         state: playerState,
         time: currentTime,
-        timestamp: Date.now() // Used for latency compensation
+        timestamp: Date.now()
     }));
     console.log(`➡️ Sending YouTube state: ${playerState} at ${currentTime}s`);
 }
@@ -311,7 +310,7 @@ function sendYouTubeState(videoId, playerState, currentTime) {
 function applyYouTubeState(data) {
     const { videoId, state, time, timestamp } = data;
     
-    // If the video ID is different, load the new one first
+    // Load new video if IDs don't match
     if (videoId !== currentVideoId) {
         currentVideoId = videoId;
         console.log(`⬅️ Loading new video: ${videoId}`);
@@ -357,14 +356,11 @@ function loadYouTubeWatchParty(videoId = currentVideoId) {
         <p style="margin-top: 15px; color: #bdbdbd;">Control is **shared**. Anyone can play, pause, or seek the video.</p>
     `;
     
-    // Set the input placeholder/value
     const inputField = gameContent.querySelector('#videoIdInput');
     inputField.value = videoId;
 
-    // Button event listener
     gameContent.querySelector('#loadVideoBtn').addEventListener('click', handleLoadVideo);
 
-    // Create the player only if the API is ready
     if (window.YT && window.YT.Player) {
         createYouTubePlayer(videoId);
     } 
@@ -372,7 +368,7 @@ function loadYouTubeWatchParty(videoId = currentVideoId) {
 
 // 8. Handles loading a new video by ID/URL
 function handleLoadVideo() {
-    // Removed the 'if (!isInitiator)' check: ANYONE can load a new video
+    // No initiator check: anyone can load a video
 
     const input = document.getElementById('videoIdInput').value;
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|\w*[\/\?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
@@ -380,9 +376,9 @@ function handleLoadVideo() {
     let newVideoId;
 
     if (match && match[1]) {
-        newVideoId = match[1]; // Found ID from URL
+        newVideoId = match[1];
     } else if (input.length === 11) {
-        newVideoId = input; // Assuming it's a raw 11-char ID
+        newVideoId = input;
     } else {
         alert("Invalid YouTube URL or Video ID.");
         return;
@@ -394,13 +390,11 @@ function handleLoadVideo() {
     if (player && typeof player.loadVideoById === 'function') {
         player.loadVideoById(currentVideoId);
     } else {
-         // Re-initialize the player if not ready
          loadYouTubeWatchParty(currentVideoId);
     }
     
     // 2. Broadcast the change to the peer
     if (signalingSocket && signalingSocket.readyState === WebSocket.OPEN) {
-        // Send a sync message to force the peer to load the new video and pause at the start
         sendYouTubeState(currentVideoId, YT.PlayerState.PAUSED, 0); 
     }
 }

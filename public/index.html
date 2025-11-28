@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Room</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="/manifest.json">
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to the Real-Time Room</h1>
+        <div class="main-layout">
+            <div class="left-column">
+                <div class="video-container">
+                    <h2>Video Call</h2>
+                    <div class="video-grid">
+                        <video id="localVideo" autoplay muted playsinline></video>
+                        <video id="remoteVideo" autoplay playsinline></video>
+                    </div>
+                    <div class="controls">
+                        <button id="joinBtn" class="control-btn">Join Call</button>
+                        <button id="muteMicBtn" class="control-btn hidden">Mute Mic</button>
+                        <button id="muteSpeakerBtn" class="control-btn hidden">Mute Speaker</button>
+                        <button id="endCallBtn" class="control-btn hidden">End Call</button>
+                    </div>
+                </div>
+                <div class="game-section">
+                    <h3>Chat</h3>
+                    <div id="chatMessages"></div>
+                    <div class="chat-input-container">
+                        <input type="text" id="chatInput" placeholder="Type your message...">
+                        <button id="sendBtn">Send</button>
+                    </div>
+                </div>
+            </div>
+            <div class="right-column">
+                <div class="game-section">
+                    <h3>Choose an Activity</h3> <div class="game-hub">
+                        <button id="youtubeWatchBtn" class="game-btn" style="background-color: #ff0000;">YouTube Watch Party</button>
+                        <button id="guessGameBtn" class="game-btn">Word Guessing Game</button>
+                        <button id="chessGameBtn" class="game-btn">Chess Game</button>
+                    </div>
+                </div>
+                <div id="gameContainer" class="game-section">
+                    <h3 id="gameTitle">Activity</h3> <div id="gameContent">
+                        <p>Select an activity from the hub above.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script async src="https://www.youtube.com/iframe_api"></script> 
+
+    <a href="chess/index.html" class="control-btn">Play Chess Game</a>
+
+</body>
+</html>

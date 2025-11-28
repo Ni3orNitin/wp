@@ -1,0 +1,274 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #121212;
+    color: #e0e0e0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+.container {
+    width: 100%;
+    max-width: 1200px;
+    background-color: #1e1e1e;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+h1, h2, h3 {
+    color: #fff;
+    text-align: center;
+    margin-bottom: 20px;
+}
+.main-layout {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.left-column, .right-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 1;
+    min-width: 300px;
+}
+.video-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    background-color: #2c2c2c;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+}
+.video-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+video {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    background-color: #000;
+    border: 2px solid #6200ea;
+    aspect-ratio: 16 / 9;
+}
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+.control-btn, .game-btn {
+    padding: 10px 20px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #fff;
+    transition: background-color 0.2s;
+}
+#end-call-btn { background-color: #e53935; }
+#end-call-btn:hover { background-color: #c62828; }
+#muteMicBtn { background-color: #43a047; }
+#muteMicBtn:hover { background-color: #388e3c; }
+#muteSpeakerBtn { background-color: #1976d2; }
+#muteSpeakerBtn:hover { background-color: #1565c0; }
+.control-btn.active {
+    background-color: #bb86fc;
+}
+.game-section {
+    background-color: #1e1e1e;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+.game-hub {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+.game-btn {
+    background-color: #007bff;
+    color: #fff;
+    padding: 15px 25px;
+    font-size: 1.2rem;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+.game-btn:hover {
+    background-color: #0056b3;
+}
+/* Chat specific styles */
+#chatMessages {
+    width: 100%;
+    height: 150px;
+    overflow-y: auto;
+    border: 1px solid #444;
+    padding: 10px;
+    border-radius: 8px;
+    background: #282828;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+#chatMessages > div {
+    background-color: #333;
+    padding: 8px;
+    border-radius: 6px;
+    text-align: left;
+}
+.chat-input-container {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+#chatInput {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid #444;
+    border-radius: 8px;
+    background: #333;
+    color: #e0e0e0;
+}
+#sendBtn {
+    padding: 10px 20px;
+    background-color: #03dac6;
+    color: #121212;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+#sendBtn:hover {
+    background-color: #02a899;
+}
+/* Word Guessing Game Styles */
+.word-display {
+    letter-spacing: 0.75rem;
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #1f2937;
+    margin-bottom: 2rem;
+    min-height: 3rem;
+}
+.message-display {
+    min-height: 2.5rem;
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: #4b5563;
+    margin-bottom: 1.5rem;
+}
+.turns-display {
+    font-size: 1rem;
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+}
+.game-input-group {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+.game-input-group input {
+    text-transform: uppercase;
+    font-size: 1.5rem;
+    width: 3rem;
+    height: 3rem;
+    text-align: center;
+    border-radius: 0.5rem;
+    border: 2px solid #d1d5db;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.game-input-group input:focus {
+    border-color: #3b82f6;
+}
+.restart-btn {
+    background-color: #ef4444;
+    color: #ffffff;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: bold;
+    transition: background-color 0.2s;
+    cursor: pointer;
+    margin-top: 1.5rem;
+}
+.restart-btn:hover {
+    background-color: #dc2626;
+}
+.loading-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3b82f6;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+    margin: auto;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+.hidden {
+    display: none;
+}
+@media (max-width: 767px) {
+    .container {
+        padding: 10px;
+    }
+    .main-layout {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .left-column, .right-column {
+        width: 100%;
+    }
+    .video-grid {
+        grid-template-columns: 1fr;
+    }
+}
+/* NEW YOUTUBE STYLES */
+#youtube-player-container {
+    padding: 10px;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    /* For responsive video embed */
+    position: relative;
+    padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+    height: 0;
+    overflow: hidden;
+}
+#youtube-player {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+}
+.youtube-controls {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 640px; 
+    margin: 0 auto;
+}
